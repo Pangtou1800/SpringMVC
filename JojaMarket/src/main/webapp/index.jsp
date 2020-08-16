@@ -24,7 +24,9 @@
 <hr>
 <h3>RequestMapping-Ant风格的URL</h3>
 <a href="antTest01">精确-antTest01</a>
-<a href="antTest02">精确-antTest02</a>
-
+<a href="antTest02">模糊-antTest02</a>
+<hr>
+<h3>RequestMapping-PathVariable</h3>
+<a href="antTest05/aa/">PathVariable-antTest05</a>
 </body>
 </html>
