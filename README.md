@@ -99,8 +99,6 @@
 
         3. SpringMVC的前端控制器收到了所有请求 - springDispatcherServlet
 
-        
-
         4. 将请求地址与@RequestMapping标注的所有地址进行匹配
 
         5. 前端控制器找到目标处理器类和目标方法，利用反射执行目标方法
@@ -159,11 +157,13 @@
         1. 映射请求参数、请求方法、请求头
 
             method
+
                 - 限定请求方式：GET|POST|PUT|DELETE...
 
                 method = RequestMethod.POST 只接受POST ※默认全部接受
 
             params
+
                 - 规定请求参数
 
                 必须带上username
@@ -182,21 +182,26 @@
                 @RequestMapping(value="/handle03", params={"username","password","age"})
 
             headers
+
                 - 规定请求头
+
                   和params一样可以写简单的格式要求
 
                 @RequestMapping(value="/handle04",headers={"User-Agent!=Mozilla/5.0.."}
                 规定某个浏览器不可以访问
 
             consumes
+
                 - 只接受内容类型是哪种的请求，即请求头中的Content-Type
 
             produces
+
                 - 告诉浏览器返回的内容是什么，即想响应头中加Content-Type
 
     4.3 Ant风格的地址匹配
 
         通配符：
+
             - ？：匹配文件名中的一个字符（0个多个都不行）
 
             - * ：匹配文件名中的任意字符 或 一层路径
@@ -216,3 +221,209 @@
             System.out.println("path05:"+ id);
             return "success";
         }
+
+## 第五节 REST风格
+
+    Representational State Transfer - 表现层/资源状态转化
+
+    ·资源 Resource : 网络上的一个实体
+        
+
+        - URI即为每一个资源的独一无二的是识别符
+
+    ·表现层 Representation ： 把资源具体呈现出来的形式
+
+        - HTML、XML、JSON 乃至图片、二进制格式等
+
+    ·状态转化 State Transfer ： 每发一个请求，就代表了客户端和服务器的一次交互过程
+
+        - 如果客户端想要操作服务器，必须通过某种手段，让服务器端发生“状态转化”
+        - HTTP协议中四个表示操作方式的动词
+
+            ·GET 查
+            ·POST 增
+            ·PUT 改
+            ·DELETE 删
+
+        概括：
+            用URL定位资源，用HTTP动词描述操作
+
+| 操作      | 经典             | Restful           |
+|-----------|------------------|-------------------|
+| 查询1号图书 | /getBook?id=1    | /book/1 GET方法   |
+| 删除1号图书 | /deleteBook?id=1 | /book/1 DELETE方法 |
+| 更新1号图书 | /updateBook?id=1 | /book/1 PUT方法   |
+| 添加图书   | addBook          | /book POST方法    |
+
+    问题：
+        从页面上只能发出GET/POST请求，其他请求如何发出？
+
+### 第六节 搭建REST风格的增删改查系统
+
+    Spring提供了对Rest风格的支持
+
+        - SpringMVC中有一个Filter，可以把普通的请求转换为规定的请求方式
+
+        <filter>
+            <filter-name>hiddenHttpMethodFilter</filter-name>
+            <filter-class>org.springframework.web.filter.HiddenHttpMethodFilter</filter-class>
+        </filter>
+        <filter-mapping>
+            <filter-name>hiddenHttpMethodFilter</filter-name>
+            <url-pattern>/*</url-pattern>
+        </filter-mapping>
+
+        - 在页面中创建一个POST类型的表单，表单中携带一个_method的参数，该参数即被识别为方法
+
+        <form action="book/1" method="post">
+            <input class="btn btn-default" type="submit" value="删除图书"/>
+            <input type="hidden" name="_method" value="DELETE"/>
+        </form>
+
+        ※HTTP状态 405 - 方法不允许
+            ·JSP 只允许 GET、POST 或 HEAD。Jasper 还允许 OPTIONS
+            ·请求行中接收的方法由源服务器知道，但目标资源不支持
+
+            高版本的Tomcat会阻止JSP响应非标准的请求，故而引起了转发失败
+
+            → 为jsp的page标签添加isError="true"即可让页面继续显示 
+
+### 第七节 SpringMVC获取请求参数
+
+    三个注解：
+        @RequestParam
+        @RequestHeader
+        @CookieValue
+
+    7.1 @RequestParam - 获取请求参数
+
+        1． 直接写一个和参数名请求相同的变量，即可获得访问参数
+
+            - 参数有的时候传入
+            - 参数没有的时候null
+
+        2. 用RequestParameter指定参数名
+
+            @RequestParam("username")
+
+            - 参数有的时候传入
+            - 参数没有的时候默认报错
+                - value
+                - required
+                - defaultValue
+
+            ※注意区分PathVariable
+
+    7.2 @RequestHeader
+
+        1. 用RequestHeader指定请求头名
+
+            @RequestHeader("User-Agent")
+
+            - 参数有的时候传入
+            - 参数没有的时候默认报错
+            - 和RequestParam同样有三个参数
+
+    7.3 @CookieValue
+
+        经典写法：
+            Cookie[] cookies = request.getCookies(); 
+            for (Cookie cookie : cookies) {
+                if ("wantedParam".equals(cookie.getName())) {
+                    String wantedValue = cookie.getValue(); 
+                }
+            }
+
+        1. 用CookieValue指定Cookie键值
+
+            @CookieValue("JSESSIONID")
+
+            - 参数有的时候传入
+            - 参数没有的时候默认报错
+            - 和RequestParam同样有三个参数
+
+    7.4 自动封装对象
+
+        @RequestMapping(value = "/book", method = RequestMethod.POST)
+        public String addBook(Book book) {
+            System.out.println("添加了新的图书:" + book);
+            return "success";
+        }
+
+        - 如果参数是一个POJO，则SpringMVC会试图为其每一个属性自动赋值
+        - 而且支持级联封装
+
+            name="属性.属性"
+
+    7.5 SpringMVC也提供了原生Web的API
+
+        - 直接写在参数列表里就可以了
+
+        public String handle05(HttpSession httpSession, HttpServletRequest request)
+
+        - 可以传入的对象有：
+
+            ·HttpServletRequest
+            ·HttpServletResponse
+            ·HttpSession
+            ·java.security.Principal
+            ·Locale
+            ·InputStream
+
+                - ServletInputStream inputStream = request.getInputStream()
+
+            ·OutputStream
+
+                - ServletOutputStream outputStream = response.getOutputStream()
+
+            ·Reader
+
+                - BufferedReader reader = request.getReader();
+
+            ·Writer
+
+                - PrintWriter writer = response.getWriter();
+
+    7.6 解决乱码
+
+        1. 提交的数据有乱码 - 请求乱码
+
+            - GET请求
+
+                改server.xml
+
+                <Connector  URIEncoding="UTF-8" port="8080" ....>
+
+            - POST请求
+
+                在第一次获取请求参数前
+                    request.setCharacterEncoding("UTF-8");
+
+        2. 响应的数据有乱码 - 响应乱码
+
+            response.setContentType("text/html;charset=utf-8");
+
+        3. SpringMVC提供了编码Filter
+
+            <filter>
+                <filter-name>characterEncodingFilter</filter-name>
+                <filter-class>org.springframework.web.filter.CharacterEncodingFilter</filter-class>
+                <init-param>
+                    <param-name>encoding</param-name> - 解决POST请求乱码
+                    <param-value>UTF-8</param-value>
+                </init-param>
+                <init-param>
+                    <param-name>forceEncoding</param-name> - 顺便解决响应乱码
+                    <param-value>true</param-value>
+                </init-param>
+            </filter>
+            <filter-mapping>
+                <filter-name>characterEncodingFilter</filter-name>
+                <url-pattern>/*</url-pattern>
+            </filter-mapping>
+    
+        ※Filter的配置顺序会影响其作用，EncodingFilter一般都配置在最前
+
+    心得：
+        Tomcat装好之后立刻修改Connector处的URIEncoding属性
+        配完前端控制器立刻配置CharacterEncodingFilter
