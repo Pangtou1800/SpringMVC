@@ -11,6 +11,40 @@
     <div class="page-header">
         <h2>Welcome to Joja Market</h2>
     </div>
+
+    <hr>
+    <form action="output01" method="post">
+        <input class="btn btn-default" type="submit" value="带数据"/>
+        <input type="hidden" name="_method" value="GET"/>
+    </form>
+    <form action="output02" method="post">
+        <input class="btn btn-default" type="submit" value="带数据2"/>
+        <input type="hidden" name="_method" value="GET"/>
+    </form>
+    <form action="output03" method="post">
+        <input class="btn btn-default" type="submit" value="带数据3"/>
+        <input type="hidden" name="_method" value="GET"/>
+    </form>
+    <form action="output04" method="post">
+        <input class="btn btn-default" type="submit" value="带数据4"/>
+        <input type="hidden" name="_method" value="GET"/>
+    </form>
+    <form action="output05" method="post">
+        <input class="btn btn-default" type="submit" value="带数据5"/>
+        <input type="hidden" name="_method" value="GET"/>
+    </form>
+    <form action="modelAttribute01" method="post">
+        <input type="hidden" name="id" value="ISBN-001"/>
+        书名：西游记<br/>
+        作者：吴承恩<br/>
+        价格：<input type="text" name="price" value="18.7"/><br/>
+        库存：<input type="text" name="stock" value="15"/><br/>
+        销量：<input type="text" name="sales" value="14"/><br/>
+        <input class="btn btn-default" type="submit" value="带数据6"/>
+        <input type="hidden" name="_method" value="POST"/>
+    </form>
+    <hr>
+
     <!--
      /book/1 GET    查询
      /book/1 DELETE 删除

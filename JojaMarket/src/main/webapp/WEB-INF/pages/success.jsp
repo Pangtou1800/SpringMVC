@@ -14,5 +14,12 @@
     访问成功！
     ${requestScope.requestAttr}
     ${sessionScope.sessionAttr}
+    <hr>
+    pageContext: ${pageScope.msg}<br/>
+    request: ${requestScope.msg}<br/>
+    request: ${requestScope.counter}<br/>
+    session: ${sessionScope.msg}<br/>
+    session: ${sessionScope.counter}<br/>
+    application: ${applicationScope.msg}<br/>
 </body>
 </html>

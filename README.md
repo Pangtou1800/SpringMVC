@@ -258,7 +258,7 @@
     问题：
         从页面上只能发出GET/POST请求，其他请求如何发出？
 
-### 第六节 搭建REST风格的增删改查系统
+## 第六节 搭建REST风格的增删改查系统
 
     Spring提供了对Rest风格的支持
 
@@ -288,7 +288,7 @@
 
             → 为jsp的page标签添加isError="true"即可让页面继续显示 
 
-### 第七节 SpringMVC获取请求参数
+## 第七节 SpringMVC获取请求参数
 
     三个注解：
         @RequestParam
@@ -421,9 +421,211 @@
                 <filter-name>characterEncodingFilter</filter-name>
                 <url-pattern>/*</url-pattern>
             </filter-mapping>
+
     
+
         ※Filter的配置顺序会影响其作用，EncodingFilter一般都配置在最前
 
     心得：
         Tomcat装好之后立刻修改Connector处的URIEncoding属性
         配完前端控制器立刻配置CharacterEncodingFilter
+
+## 第八节 数据输出
+
+    经典方法是将数据存储到域中传递到页面
+    SpringMVC则提供了新的传递方式
+
+    8.1 在方法参数处传入Map/Model/ModelMap
+
+        传入的所有数据都会存放在域中，可以从页面上获取
+
+        @RequestMapping("/output01")
+        public String output01(Map<String, Object> map){
+            map.put("msg","你好");
+            return "success";
+        }
+
+        org.springframework.ui.Model;
+        org.springframework.ui.ModelMap;
+
+        也可以
+
+        存入的值会被放在request域中
+
+        不论以上三种的哪种参数，SpringMVC传入方法的实现类都是
+        org.springframework.validation.support.BindingAwareModelMap
+
+            - 继承了LinkedHashMap
+
+    8.2 方法返回值设为ModelAndView
+
+        - View就代表目标视图
+        - Model就代表要传递的模型数据
+
+            ※数据也会存放到request域中
+
+    8.3 使用@SessionAttributes向Session域中保存数据
+
+        - 标记在类上
+        - value传入要往session中保存的数据的key, types传入要保存的value的类型
+        - 通过Model向request中存放该数据的时候，就会同时向session中也保存一份同样的内容
+
+        @SessionAttributes(value = {"msg","username"}, types = {Integer.class})
+        @Controller
+        public class OutputSessionController {
+            ...
+        }
+
+        推荐不要使用@SessionAttributes，因为可能会引发异常；
+        往session中存数据还是推荐使用原生API
+
+    8.4 @ModelAttribute
+
+        ！已经几乎没有使用场景了
+
+        - 先在某一个想要提前执行的方法上标记@ModelAttribute，
+
+           提前准备好一些目标方法执行前需要的数据，并以key保存到ModelMap中去
+
+        - 在目标方法的参数上标记@ModelAttribute("key")，
+
+           SpringMVC就不会在包装该对象时新建它，而是使用之前准备好的数据
+           而且其实用的就是同一个ModelMap
+
+    小结：
+        其实SpringMVC在一次处理过程中就一直用一个BindingAwareModelMap来保存各种数据
+        别名隐含模型
+
+## 第九节 SpringMVC源码分析
+
+    核心类：
+    org.springframework.web.servlet.Dispatcher
+
+    /**
+	 * Process the actual dispatching to the handler.
+	 * <p>The handler will be obtained by applying the servlet's HandlerMappings in order.
+	 * The HandlerAdapter will be obtained by querying the servlet's installed HandlerAdapters
+	 * to find the first that supports the handler class.
+	 * <p>All HTTP methods are handled by this method. It's up to HandlerAdapters or handlers
+	 * themselves to decide which methods are acceptable.
+	 * @param request current HTTP request
+	 * @param response current HTTP response
+	 * @throws Exception in case of any kind of processing failure
+	 */
+	protected void doDispatch(HttpServletRequest request, HttpServletResponse response) throws Exception {
+		HttpServletRequest processedRequest = request;
+		HandlerExecutionChain mappedHandler = null;
+		boolean multipartRequestParsed = false;
+
+		WebAsyncManager asyncManager = WebAsyncUtils.getAsyncManager(request);
+
+		try {
+			ModelAndView mv = null;
+			Exception dispatchException = null;
+
+			try {
+                // 1.检查是否文件上传请求
+				processedRequest = checkMultipart(request);
+				multipartRequestParsed = processedRequest != request;
+
+                // 2.根据当前请求找到控制器
+				// Determine handler for the current request.
+				mappedHandler = getHandler(processedRequest);
+                // 3.如果没有找到控制器就抛异常
+				if (mappedHandler == null || mappedHandler.getHandler() == null) {
+					noHandlerFound(processedRequest, response);
+					return;
+				}
+
+                // 4.从控制器得到适配器(反射工具：AnnotationMethodHandlerAdapter)
+				// Determine handler adapter for the current request.
+				HandlerAdapter ha = getHandlerAdapter(mappedHandler.getHandler());
+
+				// Process last-modified header, if supported by the handler.
+				String method = request.getMethod();
+				boolean isGet = "GET".equals(method);
+				if (isGet || "HEAD".equals(method)) {
+					long lastModified = ha.getLastModified(request, mappedHandler.getHandler());
+					if (logger.isDebugEnabled()) {
+						String requestUri = urlPathHelper.getRequestUri(request);
+						logger.debug("Last-Modified value for [" + requestUri + "] is: " + lastModified);
+					}
+					if (new ServletWebRequest(request, response).checkNotModified(lastModified) && isGet) {
+						return;
+					}
+				}
+
+				if (!mappedHandler.applyPreHandle(processedRequest, response)) {
+					return;
+				}
+
+				try {
+                    // 用适配器执行目标方法，统一返回ModelAndView对象
+					// Actually invoke the handler.
+					mv = ha.handle(processedRequest, response, mappedHandler.getHandler());
+				}
+				finally {
+					if (asyncManager.isConcurrentHandlingStarted()) {
+						return;
+					}
+				}
+
+                // 会设置默认视图名
+				applyDefaultViewName(request, mv);
+				mappedHandler.applyPostHandle(processedRequest, response, mv);
+			}
+			catch (Exception ex) {
+				dispatchException = ex;
+			}
+            // 转发到目标页面
+			processDispatchResult(processedRequest, response, mappedHandler, mv, dispatchException);
+		}
+		catch (Exception ex) {
+			triggerAfterCompletion(processedRequest, response, mappedHandler, ex);
+		}
+		catch (Error err) {
+			triggerAfterCompletionWithError(processedRequest, response, mappedHandler, err);
+		}
+		finally {
+			if (asyncManager.isConcurrentHandlingStarted()) {
+				// Instead of postHandle and afterCompletion
+				mappedHandler.applyAfterConcurrentHandlingStarted(processedRequest, response);
+				return;
+			}
+			// Clean up any resources used by a multipart request.
+			if (multipartRequestParsed) {
+				cleanupMultipart(processedRequest);
+			}
+		}
+	}
+
+    总结：
+
+        1. DispatcherServlet收到所有请求
+
+        2. 调用doDispatch()方法
+
+            ·getHandler()根据请求地址，获取处理器/控制器
+            ·getHandlerAdaper()根据当前处理器，拿到能调用处理器方法的适配器
+            ·使用适配器执行目标方法
+            ·目标方法执行后返回ModelAndView对象
+            ·根据ModelAndView对象的信息转发到具体的页面，数据也会被存储在请求域中
+
+        3. getHandler()细节
+
+            ·返回
+                - 目标处理器类的执行链 HandlerExecutionChain
+
+        4. getHandlerAdapter()细节
+
+            默认情况下一共三个HandlerAdapater：
+                ·HttpRequestHandlerAdapter - 需要实现HttpRequestHandler接口
+                ·SimpleControllerHandlerAdapter - 需要实现Controller接口
+                ·AnnotationMethodHandlerAdapter - 能解析注解方法的适配器
+
+            
+            
+
+        
+
+    
