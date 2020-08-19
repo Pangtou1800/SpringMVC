@@ -13,6 +13,27 @@ import javax.servlet.http.HttpSession;
 @Controller
 public class HelloController {
 
+    @RequestMapping("hello01")
+    public String hello() {
+        return "../../index";
+    }
+
+    @RequestMapping("hello02")
+    public String hello2() {
+        return "forward:/index.jsp";
+    }
+
+    @RequestMapping("hello03")
+    public String hello3() {
+        return "forward:/hello02";
+    }
+
+    @RequestMapping("hello04")
+    public String hello4() {
+        return "redirect:/hello02";
+    }
+
+
     @RequestMapping("handle01")
     public String handle01(String username) {
         System.out.println(username);

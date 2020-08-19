@@ -13,6 +13,23 @@
     </div>
 
     <hr>
+    <form action="hello01" method="post">
+        <input class="btn btn-default" type="submit" value="Hello"/>
+        <input type="hidden" name="_method" value="GET"/>
+    </form>
+    <form action="hello02" method="post">
+        <input class="btn btn-default" type="submit" value="Hello2"/>
+        <input type="hidden" name="_method" value="GET"/>
+    </form>
+    <form action="hello03" method="post">
+        <input class="btn btn-default" type="submit" value="Hello3"/>
+        <input type="hidden" name="_method" value="GET"/>
+    </form>
+    <form action="hello04" method="post">
+        <input class="btn btn-default" type="submit" value="Hello4"/>
+        <input type="hidden" name="_method" value="GET"/>
+    </form>
+    <hr>
     <form action="output01" method="post">
         <input class="btn btn-default" type="submit" value="带数据"/>
         <input type="hidden" name="_method" value="GET"/>

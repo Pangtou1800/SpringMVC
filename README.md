@@ -227,6 +227,7 @@
     Representational State Transfer - 表现层/资源状态转化
 
     ·资源 Resource : 网络上的一个实体
+
         
 
         - URI即为每一个资源的独一无二的是识别符
@@ -498,134 +499,250 @@
 
 ## 第九节 SpringMVC源码分析
 
-    核心类：
-    org.springframework.web.servlet.Dispatcher
+    9.1 核心类：
 
-    /**
-	 * Process the actual dispatching to the handler.
-	 * <p>The handler will be obtained by applying the servlet's HandlerMappings in order.
-	 * The HandlerAdapter will be obtained by querying the servlet's installed HandlerAdapters
-	 * to find the first that supports the handler class.
-	 * <p>All HTTP methods are handled by this method. It's up to HandlerAdapters or handlers
-	 * themselves to decide which methods are acceptable.
-	 * @param request current HTTP request
-	 * @param response current HTTP response
-	 * @throws Exception in case of any kind of processing failure
-	 */
-	protected void doDispatch(HttpServletRequest request, HttpServletResponse response) throws Exception {
-		HttpServletRequest processedRequest = request;
-		HandlerExecutionChain mappedHandler = null;
-		boolean multipartRequestParsed = false;
+        org.springframework.web.servlet. Dispatcher
 
-		WebAsyncManager asyncManager = WebAsyncUtils.getAsyncManager(request);
+        protected void doDispatch(HttpServletRequest request, HttpServletResponse response) throws Exception {
+            HttpServletRequest processedRequest = request;
+            HandlerExecutionChain mappedHandler = null;
+            boolean multipartRequestParsed = false;
 
-		try {
-			ModelAndView mv = null;
-			Exception dispatchException = null;
+            WebAsyncManager asyncManager = WebAsyncUtils.getAsyncManager(request);
 
-			try {
-                // 1.检查是否文件上传请求
-				processedRequest = checkMultipart(request);
-				multipartRequestParsed = processedRequest != request;
+            try {
+                ModelAndView mv = null;
+                Exception dispatchException = null;
 
-                // 2.根据当前请求找到控制器
-				// Determine handler for the current request.
-				mappedHandler = getHandler(processedRequest);
-                // 3.如果没有找到控制器就抛异常
-				if (mappedHandler == null || mappedHandler.getHandler() == null) {
-					noHandlerFound(processedRequest, response);
-					return;
-				}
+                try {
+                    // 1.检查是否文件上传请求
+                    processedRequest = checkMultipart(request);
+                    multipartRequestParsed = processedRequest != request;
 
-                // 4.从控制器得到适配器(反射工具：AnnotationMethodHandlerAdapter)
-				// Determine handler adapter for the current request.
-				HandlerAdapter ha = getHandlerAdapter(mappedHandler.getHandler());
+                    // 2.根据当前请求找到控制器
+                    // Determine handler for the current request.
+                    mappedHandler = getHandler(processedRequest);
+                    // 3.如果没有找到控制器就抛异常
+                    if (mappedHandler == null || mappedHandler.getHandler() == null) {
+                        noHandlerFound(processedRequest, response);
+                        return;
+                    }
 
-				// Process last-modified header, if supported by the handler.
-				String method = request.getMethod();
-				boolean isGet = "GET".equals(method);
-				if (isGet || "HEAD".equals(method)) {
-					long lastModified = ha.getLastModified(request, mappedHandler.getHandler());
-					if (logger.isDebugEnabled()) {
-						String requestUri = urlPathHelper.getRequestUri(request);
-						logger.debug("Last-Modified value for [" + requestUri + "] is: " + lastModified);
-					}
-					if (new ServletWebRequest(request, response).checkNotModified(lastModified) && isGet) {
-						return;
-					}
-				}
+                    // 4.从控制器得到适配器(反射工具：AnnotationMethodHandlerAdapter)
+                    // Determine handler adapter for the current request.
+                    HandlerAdapter ha = getHandlerAdapter(mappedHandler.getHandler());
 
-				if (!mappedHandler.applyPreHandle(processedRequest, response)) {
-					return;
-				}
+                    ...
 
-				try {
-                    // 用适配器执行目标方法，统一返回ModelAndView对象
-					// Actually invoke the handler.
-					mv = ha.handle(processedRequest, response, mappedHandler.getHandler());
-				}
-				finally {
-					if (asyncManager.isConcurrentHandlingStarted()) {
-						return;
-					}
-				}
+                    try {
+                        // 用适配器执行目标方法，统一返回ModelAndView对象
+                        // Actually invoke the handler.
+                        mv = ha.handle(processedRequest, response, mappedHandler.getHandler());
+                    }
+                    finally {
+                        if (asyncManager.isConcurrentHandlingStarted()) {
+                            return;
+                        }
+                    }
 
-                // 会设置默认视图名
-				applyDefaultViewName(request, mv);
-				mappedHandler.applyPostHandle(processedRequest, response, mv);
-			}
-			catch (Exception ex) {
-				dispatchException = ex;
-			}
-            // 转发到目标页面
-			processDispatchResult(processedRequest, response, mappedHandler, mv, dispatchException);
-		}
-		catch (Exception ex) {
-			triggerAfterCompletion(processedRequest, response, mappedHandler, ex);
-		}
-		catch (Error err) {
-			triggerAfterCompletionWithError(processedRequest, response, mappedHandler, err);
-		}
-		finally {
-			if (asyncManager.isConcurrentHandlingStarted()) {
-				// Instead of postHandle and afterCompletion
-				mappedHandler.applyAfterConcurrentHandlingStarted(processedRequest, response);
-				return;
-			}
-			// Clean up any resources used by a multipart request.
-			if (multipartRequestParsed) {
-				cleanupMultipart(processedRequest);
-			}
-		}
-	}
+                    // 会设置默认视图名
+                    applyDefaultViewName(request, mv);
+                    mappedHandler.applyPostHandle(processedRequest, response, mv);
+                }
+                catch (Exception ex) {
+                    dispatchException = ex;
+                }
+                // 转发到目标页面
+                processDispatchResult(processedRequest, response, mappedHandler, mv, dispatchException);
+            }
+            ...
+        }
 
-    总结：
+        总结：
 
-        1. DispatcherServlet收到所有请求
+            1. DispatcherServlet收到所有请求
 
-        2. 调用doDispatch()方法
+            2. 调用doDispatch()方法
 
-            ·getHandler()根据请求地址，获取处理器/控制器
-            ·getHandlerAdaper()根据当前处理器，拿到能调用处理器方法的适配器
-            ·使用适配器执行目标方法
-            ·目标方法执行后返回ModelAndView对象
-            ·根据ModelAndView对象的信息转发到具体的页面，数据也会被存储在请求域中
+                ·getHandler()
+                    根据请求地址在HandlerMapping中找到请求的映射信息，获取处理器/控制器
+                ·getHandlerAdaper()
+                    根据当前处理器，拿到能调用处理器方法的适配器
+                ·使用适配器执行目标方法
+                ·目标方法执行后返回ModelAndView对象
+                ·根据ModelAndView对象的信息转发到具体的页面，数据也会被存储在请求域中
 
-        3. getHandler()细节
+            3. getHandler()细节
 
-            ·返回
-                - 目标处理器类的执行链 HandlerExecutionChain
+                ·返回
 
-        4. getHandlerAdapter()细节
+                    - 目标处理器类的执行链 HandlerExecutionChain
 
-            默认情况下一共三个HandlerAdapater：
-                ·HttpRequestHandlerAdapter - 需要实现HttpRequestHandler接口
-                ·SimpleControllerHandlerAdapter - 需要实现Controller接口
-                ·AnnotationMethodHandlerAdapter - 能解析注解方法的适配器
+            4. getHandlerAdapter()细节
 
-            
-            
+                默认情况下一共三个HandlerAdapater：
+                    ·HttpRequestHandlerAdapter - 需要实现HttpRequestHandler接口
+                    ·SimpleControllerHandlerAdapter - 需要实现Controller接口
+                    ·AnnotationMethodHandlerAdapter - 能解析注解方法的适配器
+
+            5. HandlerMappings是什么时候初始化的呢？
+
+    9.2 SpringMVC九大组件
+
+        关键位置的功能都是由组件来完成的
+
+        1. 多部件解析器 - 文件上传
+
+            /** MultipartResolver used by this servlet */
+            private MultipartResolver multipartResolver;
+
+        2. 区域信息解析器 - 国际化
+
+            /** LocaleResolver used by this servlet */
+            private LocaleResolver localeResolver;
+
+        3. 主题解析器 - 主题效果更换 ※没人用
+
+            /** ThemeResolver used by this servlet */
+            private ThemeResolver themeResolver;
+
+        4. handlerMappings - handler映射器
+
+            /** List of HandlerMappings used by this servlet */
+            private List<HandlerMapping> handlerMappings;
+
+        5. handlerAdapters - handler适配器
+
+            /** List of HandlerAdapters used by this servlet */
+            private List<HandlerAdapter> handlerAdapters;
+
+        6. 异常解析器 - 控制异常
+
+            /** List of HandlerExceptionResolvers used by this servlet */
+            private List<HandlerExceptionResolver> handlerExceptionResolvers;
+
+        7. 视图名转换器 ※没用
+
+            /** RequestToViewNameTranslator used by this servlet */
+            private RequestToViewNameTranslator viewNameTranslator;
+
+        8. flashMap管理器 - 运行重定向携带数据的功能
+
+            /** FlashMapManager used by this servlet */
+            private FlashMapManager flashMapManager; 
+
+        9. 视图解析器 - 视图相关功能
+
+            /** List of ViewResolvers used by this servlet */
+            private List<ViewResolver> viewResolvers;
+
+        共通特点：
+
+            都是接口 - 接口就是规范  ※可以说是很有野心了！
+       
+        dispatcherServlet初始化九大组件:
+
+            protected void initStrategies(ApplicationContext context) {
+                initMultipartResolver(context);
+                initLocaleResolver(context);
+                initThemeResolver(context);
+                initHandlerMappings(context);
+                initHandlerAdapters(context);
+                initHandlerExceptionResolvers(context);
+                initRequestToViewNameTranslator(context);
+                initViewResolvers(context);
+                initFlashMapManager(context);
+            }
+
+        - 去容器中找组件 ※组件不同可能按照beanId也可能按照class寻找
+        - 找不到就用默认配置
+
+        九大组件的默认配置路径：
+
+            org.springframework.web.servlet
+                > DispatcherServlet.properties
+
+    9.3 handler是如何执行方法的？
+
+        mv = ha.handle(processedRequest, response, handler);
+
+        难点：SpringMVC参数设置随意性非常大
+
+        示例方法：
+            method(String str, Book book, HttpRequest request, Model model)
+
+            1. 有注解
+
+                ·根据注解配置
+                ·AttributeValue注解会有一些特殊操作
+
+            2. 没有注解
+
+                ·先看是不是原生WebAPI
+                ·再看是不是Model或Map
+                ·再看是不是其他的预设类型如HttpStatus
+                ·再看是不是基本类型
+                ·那么就是自定义类型
+
+            3. 自定义类型确定值时的详细：
+
+                ·attrName使用参数类型的首字母小写或@ModelAttribute里标记的值
+                ·尝试从隐含模型中获取值
+                ·看是否@SessionAttribute标注的属性 ※没有时会有异常
+                ·再不是的时候就反射创建对象，然后绑定各属性
 
         
 
-    
+## 第十节 视图解析
+
+    10.1 转发到视图解析器未拼串的位置
+
+        1. ../路径回退
+
+            return "../../index";
+
+        2. forward:/转发至项目根路径 ※推荐
+
+            return "forward:/index.jsp";
+
+    10.2 多次转发
+
+        forward即可
+
+        return "forward:/hello02";
+
+        细节： forward前缀转发不会由视图解析器拼串
+
+    10.3 重定向
+
+        redirect即可
+
+        return "redirect:/hello02";
+
+        细节：原生Servlet重定向需要加上项目名，SpringMVC则会自动添加，而且也不会拼串
+
+    10.4 原理
+
+        1. 方法执行后的返回值会作为页面地址参考，转发或重定向到页面
+
+        2. 视图解析器可以对页面地址进行拼串
+
+        任何返回值都会被包装成ModelAndView对象
+
+        主要方法：
+
+        render(ModelAndView mv, HttpServletRequest, HttpServletResponse)
+
+            - view = resolveViewName(mv.getViewName(), mv.getModelInternal(), locale, request);
+
+                所有视图解析器都会尝试根据视图名得到View对象
+
+            - view.render(mv.getModelInternal(), request, response);
+
+                ·把Model中的属性全都暴露到request域中
+                ·转发或重定向
+
+        七大组件之viewResolvers
+
+            - 为了拼串功能在springmvc-servlet.xml里已经配置过了
+            - 而且默认就是InternalResourceViewResolver
