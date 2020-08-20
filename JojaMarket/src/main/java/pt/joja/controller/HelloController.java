@@ -12,15 +12,20 @@ import javax.servlet.http.HttpSession;
 
 @Controller
 public class HelloController {
+    @RequestMapping("login")
+    public String toLogin() {
+        return "Login";
+    }
+
 
     @RequestMapping("hello01")
     public String hello() {
-        return "../../index";
+        return "index2";
     }
 
     @RequestMapping("hello02")
     public String hello2() {
-        return "forward:/index.jsp";
+        return "forward:/index2.jsp";
     }
 
     @RequestMapping("hello03")

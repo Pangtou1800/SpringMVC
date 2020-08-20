@@ -691,8 +691,6 @@
                 ·看是否@SessionAttribute标注的属性 ※没有时会有异常
                 ·再不是的时候就反射创建对象，然后绑定各属性
 
-        
-
 ## 第十节 视图解析
 
     10.1 转发到视图解析器未拼串的位置
@@ -746,3 +744,137 @@
 
             - 为了拼串功能在springmvc-servlet.xml里已经配置过了
             - 而且默认就是InternalResourceViewResolver
+
+    10.5 视图和视图解析器
+
+        ·请求处理方法执行完成后，最终会返回一个ModelAndView对象。
+         对于那些返回String，View或ModelMap等类型的处理方法，
+         SpringMVC会在内部将它们装配成一个ModelAndView对象，
+         它包含了逻辑名和模型对象的视图
+
+        ·SpringMVC借助视图解析器（ViewResolver）得到最终的视图对象（View），
+         最终的视图可以使JSP，也可以是Excel、JFreeChart等各种形式的视图
+
+        ·对于最终采取何种视图对象对模型数据进行渲染，处理器并不关心。
+         处理器的工作聚焦在生产模型数据的工作上，从而实现MVC的充分解耦
+
+        ·视图的作用是渲染模型数据，Spring定义的View高度抽象
+
+        ·视图对象由视图解析器负责实例化
+
+        ·由于视图是无状态的，所以不会有线程安全问题
+
+## 第十一节 JstlView示例
+
+    导入jstl的jar包之后，InternalResourceViewResolver创建的就是JstlView实例了
+
+        - taglibs-standard-impl
+        - taglibs-standard-spec
+
+    也可以通过配置来指定View
+
+        <property name="viewClass" value="org.springframework.web.servlet.view.JstlView" />
+
+    11.1 经典国际化步骤
+
+        1. 得到一个Locale对象
+        2. 使用ResourceBundle绑定国际化资源文件
+        3. 使用ResourceBundle.getString("key")获取某个配置的值
+        4. 做Web页面，可以使用fmt标签库来简化工作，但依然需要大量的设置工作
+
+    11.2 JstlView国际化步骤
+
+        1. 让Spring管理国际化资源文件
+        2. 去页面使用<fmt:message>取值
+
+            ·i18n_zh_CN.properties
+            ·i18n_en_US.properties
+
+            <bean id="messageSource" class="org.springframework.context.support.ResourceBundleMessageSource">
+                <property name="basename" value="i18n" />
+            </bean>
+
+            <h1><fmt:message key="welcomeInfo"/></h1>
+
+        注意：
+            ·beanId必须为“messageSource”
+            ·forward/redirect方式也不会进行国际化
+
+## 第十二节 请求映射
+
+    可以把请求直接映射到页面
+
+    ·使用SpringMVC提供的mvc命名空间
+
+    xmlns:mvc="http://www.springframework.org/schema/mvc"
+
+    xsi:schemaLocation="http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc.xsd"
+
+    ·配置映射
+
+        <mvc:view-controller path="/toLoginPage" view-name="Login" /> - Login.jsp
+
+        ※实际上经过了视图解析，所以可以实现国际化
+
+    但是配置之后就相当于启动了mvc的配置驱动模式，
+    需要同时打开注解驱动模式才能让其他的注解MVC也同时工作
+
+        <mvc:annotation-driven/>
+
+## 第十三节 自定义视图解析器和视图对象
+
+    handler方法：
+        return "joja:whateverView";
+
+    1. 编写自定义的视图解析器和视图实现类
+
+        - JojaViewResolver
+
+            如果以"joja:"开头则创建JojaView，否则返回null
+
+        - JojaView
+
+            获取Model, Request, Response, 就想普通的Servlet那样进行处理
+
+    2. 视图解析器配置在IOC容器中
+
+        InternalResourceViewResolver会默认将地址拼串，
+        所以自定义解析器要配置在它前面
+
+        或者为了支持order属性，给JojaViewResolver实装Ordered接口
+
+            - getOrder() : 越小优先级越高
+
+              InternalResourceViewResolver默认优先级是Integer.MAX_VALUE
+
+## 第十四节 REST风格的CRUD
+
+    C: Create - 创建
+    R: Retrieve - 查询
+    U: Update - 更新
+    D: Delete - 删除
+
+    14.1 目标
+
+        - 员工列表显示所有员工信息
+        - 同时提供删除和修改连接
+        - 员工添加页面
+        - 员工修改页面（不提供名字修改）
+
+        规定增删改查的地址：   
+            /资源名/资源标识
+
+            /emp/1 GET - 查询id为1的员工
+            /emp/1 PUT - 更新id为1的员工
+            /emp/1 DELETE - 删除id为1的员工
+            /emp   POST - 新增员工
+            /emps  GET - 查询所有员工
+
+    14.2 员工列表展示
+
+        index.jsp - <jsp:forward page="/emps"/>
+
+        EmployeeController - getEmps(Model model)
+
+        list.jsp - <table>
+
