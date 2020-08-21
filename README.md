@@ -878,3 +878,40 @@
 
         list.jsp - <table>
 
+    14.3 员工添加
+
+        <a "addEmp"> -> add.jsp -> "save" -> SaveController -> list.jsp
+
+        ·可以写原生的<form>标签
+
+        ·SpringMVC提供了表单标签 - Model中的数据属性绑定表单元素，回显非常方便
+
+        <%@ taglib prefix="form" uri="http://www.springframework.org/tags/form" %>
+
+        <form:input path="lastName" cssClass="form-control"/>
+
+            注意：可能会报没有“command”对象的错
+
+            SpringMVC认为每一个属性都是要回显的，所以path指定的每一属性都要
+            在请求域的command对象中有。
+
+            所以跳转添加页面之前需要提前放好 “command” - Employee对象
+            或者向<form:form>标签添加modelAttribute属性，改变"command"的名字
+
+    14.4 员工修改
+
+        edit -> 查出修改对象员工 -> edit.jsp -> 输入修改信息 -> "edit" ->
+        EditController -> list.jsp
+
+    14.5 员工删除
+
+        delete -> 删除请求 -> DeleteController -> list.jsp
+
+    14.6 静态资源
+
+        静态资源的访问也被拦截了，需要在springmvc.xml中配置
+
+        <mvc:default-servlet-handler/>
+
+        搭配<mvc:annotation-driven/>使用
+

@@ -31,4 +31,6 @@
 
     <mvc:view-controller path="/toLoginPage" view-name="Login"/>
 
+    <mvc:default-servlet-handler />
+
 </beans>
