@@ -1,5 +1,13 @@
 package pt.joja.domain;
 
+import org.hibernate.validator.constraints.Length;
+import org.springframework.format.annotation.DateTimeFormat;
+
+import javax.validation.constraints.Email;
+import javax.validation.constraints.NotEmpty;
+import javax.validation.constraints.Past;
+import java.util.Date;
+
 public class Employee {
 
     public Employee() {
@@ -13,10 +21,22 @@ public class Employee {
         this.department = department;
     }
 
+    public Employee(Integer id, String lastName, String email, Integer gender, Department department, Date birth) {
+        this.id = id;
+        this.lastName = lastName;
+        this.email = email;
+        this.gender = gender;
+        this.department = department;
+        this.birth = birth;
+    }
+
     private Integer id;
 
+    @NotEmpty
+    @Length(min = 6, max = 18)
     private String lastName;
 
+    @Email
     private String email;
 
     private Integer gender;
@@ -71,6 +91,19 @@ public class Employee {
                 ", email='" + email + '\'' +
                 ", gender=" + gender +
                 ", department=" + department +
+                ", birth=" + birth +
                 '}';
+    }
+
+    @DateTimeFormat(pattern = "yyyy-MM-dd")
+    private Date birth;
+
+    @Past
+    public Date getBirth() {
+        return birth;
+    }
+
+    public void setBirth(Date birth) {
+        this.birth = birth;
     }
 }

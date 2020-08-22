@@ -3,11 +3,13 @@ package pt.joja.controller;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import pt.joja.dao.DepartmentDao;
 import pt.joja.dao.EmployeeDao;
 import pt.joja.domain.Employee;
 
+import javax.validation.Valid;
 import java.util.Collection;
 
 @Controller
@@ -40,16 +42,22 @@ public class EmployeeController {
      */
     @RequestMapping("/toAddPage")
     public String toAddPage(Model model) {
-        model.addAttribute("departs", departmentDao.getDepartments());
-        model.addAttribute("newEmp", new Employee());
         return "add";
     }
 
     @RequestMapping(value = "/emp", method = RequestMethod.POST)
-    public String addEmp(Employee employee) {
+    public String addEmp(@Valid Employee employee, BindingResult bindingResult, Model model) {
         System.out.println(employee);
-        employeeDao.save(employee);
-        return "redirect:/emps";
+        System.out.println(bindingResult);
+        if (bindingResult.hasErrors()) {
+            model.addAttribute("newEmp", employee);
+            model.addAttribute("org.springframework.validation.BindingResult.newEmp", bindingResult);
+            return "add";
+        } else {
+            employeeDao.save(employee);
+            return "redirect:/emps";
+        }
+
     }
 
     @RequestMapping(value = "/emp/{id}", method = RequestMethod.GET)
@@ -65,6 +73,8 @@ public class EmployeeController {
         if (id != null) {
             model.addAttribute("employee", employeeDao.get(id));
         }
+        model.addAttribute("departs", departmentDao.getDepartments());
+        model.addAttribute("newEmp", new Employee());
     }
 
     @RequestMapping(value = "/emp/{id}", method = RequestMethod.PUT)
@@ -76,6 +86,12 @@ public class EmployeeController {
     @RequestMapping(value = "/emp/{id}", method = RequestMethod.DELETE)
     public String deleteEmp(@PathVariable("id") Integer id) {
         employeeDao.delete(id);
+        return "redirect:/emps";
+    }
+
+    @RequestMapping("/quickAdd")
+    public String quickAdd(@RequestParam("empInfo")Employee employee) {
+        employeeDao.save(employee);
         return "redirect:/emps";
     }
 

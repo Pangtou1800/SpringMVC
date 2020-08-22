@@ -915,3 +915,230 @@
 
         搭配<mvc:annotation-driven/>使用
 
+## 第十五节 数据转换&数据格式化&数据校验
+
+    15.1 数据绑定流程
+
+        1.SpringMVC主框架将ServletRequest对象及目标方法的入参实例，
+           传递给WebDataBinderFactory，以创建DataBinder实例对象
+
+        2.DataBinder调用绑定在SpringMVC上下文中的ConversionService组件，
+           进行数据类型转换、数据格式化工作。将Servlet中的请求信息填充到入参对象中
+
+        3.调用Validator组件对已经绑定了请求消息的入参对象进行数据合法性校验，
+           并最终生成数据绑定结果BindingData对象
+
+        4.SpringMVC抽取BindingResult中的入参对象和校验错误对象，
+           将它们赋值给处理方法的响应入参
+
+    15.2 数据格式化
+
+        1.对属性对象的输入/输出进行格式化，从其本质上讲依然属于“类型转换”的范畴。
+
+        2.Spring在格式化模块中定义了一个实现ConversionService接口的
+          FormattingConversionService实现类，该实现类扩展了GenericConversionService，
+          因此它既具有类型转换的功能，又具有格式化的功能
+
+        3.FormattingConversionService拥有一个..ServiceFactoryBean工厂类，
+          用于构造ConversionService
+
+    15.3 自定义数据转换
+
+        1.实现Converter接口，编写转换逻辑
+
+        2.配置拥有Converter的ConversionService
+
+        <bean id="conversionService" class="org.springframework.context.support.ConversionServiceFactoryBean">
+            <property name="converters">
+                <set>
+                    <bean class="pt.joja.component.StringToEmployeeConverter"/>
+                </set>
+            </property>
+        </bean>
+
+        ※因为是工厂所以其实bean的实例是ConversionService
+
+        3.将WebDataBinder中的ConversionService设置为添加了自定义类型转换器的实例
+
+        <mvc:annotation-driven conversion-service="conversionService"/>
+
+    15.4 关于mvc:annotation-driven
+
+        开启后会自动注册：
+            ·RequestMappingHandlerMapping
+            ·RequestMappingHandlerAdapter
+            ·ExceptionHandlerExceptionResolver
+
+        还将提供以下支持：
+            ·用ConversionService实例对表单参数进行类型转换
+            ·用@NumberFormat @DateTimeFormat注解完成数据类型的格式化
+            ·@Valid注解对JavaBean进行JSR303验证
+            ·@RequestBody和@ResponseBody注解
+
+    15.5 格式化
+
+        想要给某个属性格式化
+
+        @DateTimeFormat(pattern = "yyyy-MM-dd")
+        private Date birth;
+
+        就会限定死日期格式，不符合的输入会无法解析，返回400
+
+        但是，由ConversionServiceFactoryBean创建的ConverterService是没有格式化组件的
+        要用FormattingConversionServiceFactoryBean
+
+    15.6 数据校验
+
+        ·经典写法：
+            在Controller里取出每一个数据进行校验，失败就回显到元页面
+
+        ·SpringMVC注解利用JSR303
+
+            JSR：Java Specification Requst - Java标准提案
+            为元素标记注解来指定校验规则
+
+            @Null, @NotNull, @Min(Value), @Max(Value), @Size(max, min), @Pattern(value)
+
+            Hibernate Validator就实现了JSR303规范
+
+            它还额外支持一些注解：@Email @Length @NotEmpty ...
+
+        ·步骤：
+            1.导入
+
+                <dependency>
+                    <groupId>org.hibernate.validator</groupId>
+                    <artifactId>hibernate-validator</artifactId>
+                    <version>6.1.5.Final</version>
+                </dependency>
+                <dependency>
+                    <groupId>org.hibernate.validator</groupId>
+                    <artifactId>hibernate-validator-annotation-processor</artifactId>
+                    <version>6.1.5.Final</version>
+                </dependency>
+
+            2.给JavaBean的属性添加校验注解
+
+                @NotEmpty
+                @Length(min = 6, max = 18)
+                private String lastName;
+
+                @Email
+                private String email;
+
+            3.在SpringMVC封装对象时指定它需要校验
+
+                public String addEmp(@Valid Employee employee) {
+
+            4. 捕获校验结果
+
+                ·在属性后面追加一个BindingResult
+                ·添加有错时返回页面
+                ·在对应输入项后添加<form:errors>标签
+
+                public String addEmp(@Valid Employee employee, BindingResult bindingResult, Model model) {
+
+                if (bindingResult.hasErrors()) {
+
+                <form:input path="lastName" cssClass="form-control"/>
+                <form:errors path="lastName"/>
+
+        ·几个问题
+
+            1. 原生表单怎么办？
+
+                - 在Controller里面对BindingResult进行加工即可
+
+            2. 非Hibernate错误会直接报Exception，如何订制自己的错误消息？
+
+                - 编写国际化错误文件
+
+                    errors_zh_CN.properties
+                        Length.employee.lastName=员工名必须在{2}到{1}位之间
+
+                    errors_en_US.properties
+                        Length.employee.lastName=employee lastname must between {2} to {1} characters
+
+                    key的规定：
+                        每个字段发生错误后都会有自己的错误Code
+                        key必须是这个Code之一
+
+                        [
+                            Email.employee.email,
+                            Email.email,
+                            Email.java.lang.String,
+                            Email
+                        ]
+
+                    动态参数的顺序是属性值的英字顺
+
+                - 交由SpringMVC管理
+
+                    <bean id="messageSource" class="org.springframework.context.support.ResourceBundleMessageSource">
+                        <property name="basenames">
+                            <array>
+                                <value>i18n</value>
+                                <value>errors</value>
+                            </array>
+                        </property>
+                    </bean>
+
+                - 在页面显示错误消息即可
+
+                - 也可以在校验标签上添加value，但是就不支持国际化了
+
+                    @NotEmpty("不可以为空")
+
+## 第十六节 SpringMVC支持Ajax
+
+    16.1 目标
+
+        ·返回数据是json
+        ·响应页面的$.ajax()请求
+
+    16.2 经典实现
+
+        ·导入GSON
+        ·返回数据用GSON转成json
+        ·写出
+
+    16.3 SpringMVC步骤
+
+        ·导包jackson
+
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-databind</artifactId>
+                <version>2.11.0</version>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-core</artifactId>
+                <version>2.11.0</version>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-annotations</artifactId>
+                <version>2.11.0</version>
+            </dependency>
+
+        ·给Controller标注@ResponseBody
+            -jackson包会将返回值自动转换为json格式
+            -json会被设置为响应体
+
+            ※Tips
+                @JsonIgnore 忽略某字段
+                @JsonFormat(pattern="yyyy-MM-dd") 整型
+
+    16.4 关于@RequestBody
+
+        和@RequestParam一样标记给参数，可以直接获得POST方法的请求体
+
+        当用ajax发送 application/json 格式的POST的json数据时，
+        SpringMVC可以直接封装进自定义类对象里
+
+        ※参数设置为org.springframework.http.HttpEntity时，可以拿到整个http请求的信息
+        ※返回值为  org.springframework.http.ResponseEntity时，可以分别设置
+            ·body
+            ·headers
+            ·statusCode

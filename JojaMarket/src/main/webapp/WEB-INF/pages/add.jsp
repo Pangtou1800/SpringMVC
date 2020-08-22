@@ -27,10 +27,12 @@
         <div class="form-group">
             <label>LastName</label>
             <form:input path="lastName" cssClass="form-control"/>
+            <form:errors path="lastName"/>
         </div>
         <div class="form-group">
             <label>E-mail</label>
             <form:input path="email" cssClass="form-control"/>
+            <form:errors path="email"/>
         </div>
         <div class="form-group">
             <label>Gender</label>
@@ -44,6 +46,11 @@
                     <span>女</span>
                 </label>
             </div>
+        </div>
+        <div class="form-group">
+            <label>Birthday</label>
+            <form:input path="birth" cssClass="form-control"/>
+            <form:errors path="birth"/>
         </div>
         <div class="form-group">
             <label>Department</label>

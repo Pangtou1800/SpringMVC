@@ -28,6 +28,7 @@
             <th>LastName</th>
             <th>E-mail</th>
             <th>Gender</th>
+            <th>Birthday</th>
             <th>Department</th>
             <th>Edit</th>
             <th>Delete</th>
@@ -38,6 +39,7 @@
                 <td>${emp.lastName}</td>
                 <td>${emp.email}</td>
                 <td>${emp.gender == 0 ? "男" : "女"}</td>
+                <td>${emp.birth}</td>
                 <td>${emp.department.departmentName}</td>
                 <td><a href="${ctp}/emp/${emp.id}" class="btn btn-default">&nbsp;Edit&nbsp;</a></td>
                 <td>
@@ -47,6 +49,11 @@
         </c:forEach>
     </table>
     <a href="${ctp}/toAddPage" class="btn btn-default">添加员工</a>
+    <form action="${ctp}/quickAdd" method="post">
+        <input type="hidden" value="_method" value="POST"/>
+        <input type="text" name="empInfo" value="admin-admin@joja.com-1-101"/>
+        <input type="submit" value="快速添加" class="btn btn-default"/>
+    </form>
     <form id="deleteForm" action="" method="post">
         <input type="hidden" name="_method" value="DELETE"/>
     </form>

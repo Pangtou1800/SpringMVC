@@ -24,13 +24,27 @@
     </bean>-->
 
     <bean id="messageSource" class="org.springframework.context.support.ResourceBundleMessageSource">
-        <property name="basename" value="i18n"/>
+        <property name="basenames">
+            <array>
+                <value>i18n</value>
+                <value>errors</value>
+            </array>
+        </property>
     </bean>
 
-    <mvc:annotation-driven/>
+
+    <mvc:annotation-driven conversion-service="conversionService"/>
 
     <mvc:view-controller path="/toLoginPage" view-name="Login"/>
 
-    <mvc:default-servlet-handler />
+    <mvc:default-servlet-handler/>
+
+    <bean id="conversionService" class="org.springframework.format.support.FormattingConversionServiceFactoryBean">
+        <property name="converters">
+            <set>
+                <bean class="pt.joja.component.StringToEmployeeConverter"/>
+            </set>
+        </property>
+    </bean>
 
 </beans>
