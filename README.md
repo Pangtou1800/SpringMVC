@@ -1142,3 +1142,248 @@
             ·body
             ·headers
             ·statusCode
+
+## 第十七节 文件上传
+
+    步骤：
+        1.写上传form
+
+            <form action="" method="post" enctype="multipart/form-data">
+                用户头像：<input type="file" name="headerImg"/><br/>
+                用户名：<input type="text" name="username"/>
+                <input type="submit" value="提交"/>
+            </form>
+
+        2.导入文件上传包
+
+            <dependency>
+                <groupId>commons-fileupload</groupId>
+                <artifactId>commons-fileupload</artifactId>
+                <version>1.3.1</version>
+            </dependency>
+
+            - 依赖commons-io
+
+        3.在SpringMVC配置文件中编写配置文件上传解析器 - MultipartResolver
+
+            <bean id="multipartResolver" class="org.springframework.web.multipart.commons.CommonsMultipartResolver">
+                <property name="maxUploadSize" value="#{20*1024*1024}"/>
+                <property name="defaultEncoding" value="UTF-8"/>
+            </bean>
+
+        4.写Controller
+
+            @RequestMapping("/uploadFile")
+            public String uploadFile(@RequestParam("username") String username, @RequestParam("headerImg") MultipartFile file, Model model, HttpServletRequest request) {
+                try {
+                    File newFile = new File(request.getServletContext().getRealPath("/upload/" + file.getOriginalFilename()));
+                    file.transferTo(newFile);
+                    model.addAttribute("message", "上传成功！");
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    model.addAttribute("message", "上传失败：" + e.getMessage());
+                }
+                return "forward:/index.jsp";
+            }
+
+            细节：
+                file.getName() -> 文件项的名字
+                file.getOriginalFilename() -> 文件的名字
+
+## 第十八节 拦截器
+
+    SpringMVC提供了拦截器机制，允许目标方法运行前后进行一些处理 - 和Filter的效果一样
+
+        接口：org.springframework.web.servlet.HandlerInterceptor
+
+            -preHandle 目标方法之前
+            -postHandle 目标方法之后
+            -afterCompletion 响应完成后-页面渲染完成后
+
+    18.1 步骤
+
+        1.编写拦截器
+
+        2.配置拦截器以及它的拦截对象
+
+            - 拦截全部请求
+
+            <mvc:interceptors>
+                <bean id="myInterceptor" class="pt.joja.interceptor.MyInterceptor"/>
+            </mvc:interceptors>
+
+            - 指定拦截模式
+
+            <mvc:interceptors>
+                <mvc:interceptor>
+                    <mvc:mapping path="/interceptor01"/>
+                    <bean id="myInterceptor" class="pt.joja.interceptor.MyInterceptor"/>
+                </mvc:interceptor>
+            </mvc:interceptors>
+
+        细节：
+            1.preHandle return false的话，以后的流程就都没有了
+            2.只要preHandle放行，后续方法出错afterCompletion就会执行
+            3.多拦截器：
+
+                [MyInterceptor]preHandle..
+                [MySecondInterceptor]preHandle..
+                test01
+                [MySecondInterceptor]postHandle..
+                [MyInterceptor]postHandle..
+                success.jsp
+                [MySecondInterceptor]afterCompletion..
+                [MyInterceptor]afterCompletion..
+
+    18.2 Filter VS Interceptor
+
+        关键：
+            Interceptor是装配在IOC容器中的，需要其他组件配合完成的功能很容易实现
+
+## 第十九节 异常处理
+
+    九大组件之HandlerExceptionResolver
+
+    19.1 默认的HandlerExeptionResolver
+
+        AnnotationMethodHandlerExceptionResolver
+         -> ExceptionHandlerExceptionResolver
+
+            - 标记了@ExceptionHandler注解的
+
+        ResponseStatusExceptionResolver
+
+            - 标记了@ResponseStatus注解的
+
+        DefaultHandlerExceptionResolver
+
+            - 判断SpringMVC自身的异常
+
+    19.2 @ExceptionHandler
+
+        在Controller中写异常处理方法并标记为@ExceptionHandler即可
+
+        由于参数只能是一个异常，所以将返回值设置为ModelAndView
+
+        @ExceptionHandler(ArithmeticException.class)
+        public ModelAndView handleException(ArithmeticException e) {
+            ModelAndView model = new ModelAndView();
+            model.setViewName("myError");
+            model.addObject("message", "算术异常:" + e.getMessage());
+            return model;
+        }
+
+    19.3 @ControllerAdvice
+
+        将所有的异常处理方法集中在一个异常处理类中，这个类标记为@ControllerAdvice
+
+        异常处理编写方法不变
+
+        优先顺序：
+
+            本类精确 > 本类模糊 > 全局精确 > 全局模糊
+
+    19.4 @ResponseStatus
+
+        标记在自定义异常上，表示该异常未被处理时返回的HttpStatus和说明
+
+        @ResponseStatus(reason = "用户非管理员", value= HttpStatus.FORBIDDEN)
+        public class UsernameNotFoundException extends RuntimeException {
+        }
+
+    19.5 Spring自己的异常
+
+        如HttpRequestMethodNotSupportedException
+
+        如果没有异常处理器处理它，那么DefaultHandlerExceptionResolver会处理它
+
+    19.6 配置方式处理异常
+
+        SimpleMappingExceptionResolver
+
+        <bean class="org.springframework.web.servlet.handler.SimpleMappingExceptionResolver">
+            <property name="exceptionMappings">
+                <props>
+                    <prop key="java.lang.NumberFormatException">myError</prop>
+                </props>
+            </property>
+            <property name="exceptionAttribute" value="message"/>
+                -取出ex.getMessage()的key
+        </bean>
+
+## 第二十节 总结SpringMVC运行流程
+
+    1.所有请求，前端控制器（DispatcherServlet）收到请求，调用doDispatch()进行处理
+
+    2.根据handlerMapping中保存的映射信息，找到处理当前请求的处理器执行链
+      （HandlerExecutionChain - 包含Handler和Interceptor）
+
+    3.根据处理器找到它的适配器（HandlerAdapter）
+
+    4.拦截器的preHandle先执行
+
+    5.适配器执行目标方法，并返回ModelView
+        1)ModelAttribute标注的方法提前运行
+        2)执行目标方法时，确定目标方法的参数
+            ·有注解
+            ·没注解
+                -Model、Map以及其他预设类
+                -自定义类型
+                    ·先从隐含模型中找
+                    ·再看是否@SessionAttributes标注（找不到异常）
+                    ·都不是就反射创建实例
+
+    6.拦截器的postHandle方法
+
+    7.处理结果 - 页面渲染流程
+        1)如果有异常，使用异常解析器处理异常；处理完成后依然返回ModelAndView
+        2)进行页面渲染
+            ·视图解析器根据视图名得到视图对象
+            ·视图对象调用render方法
+
+    8.拦截器的afterCompletion方法
+
+## 第二十一节 SpringMVC和Spring整合
+
+    目的：
+        分工明确
+
+        SpringMVC配置文件 - 网站转发逻辑以及网站功能有关
+
+            -视图解析器
+            -文件上传解析器
+            -ajax支持
+            ...
+
+        Spring配置文件 - 业务关联
+
+            -事务控制
+            -数据源
+            ...
+
+    方法1：xml导入
+
+        <import resource="spring.xml"/>
+
+    方法2：分容器
+
+        web.xml中添加spring配置
+
+        <context-param>
+            <param-name>contextConfigLocation</param-name>
+            <param-value>classpath:spring.xml</param-value>
+        </context-param>
+        <listener>
+            <listener-class>org.springframework.web.context.ContextLoaderListener</listener-class>
+        </listener>
+
+        SpringMVC：扫描Controller和ControllerAdvice
+        Spring：扫描上面2个以外的
+
+        父子容器：
+
+            1.可见性：
+                子可以用父，父不可以用子
+            2.由ContextLoaderListener创建的是父容器
+
+    

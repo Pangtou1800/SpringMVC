@@ -32,7 +32,6 @@
         </property>
     </bean>
 
-
     <mvc:annotation-driven conversion-service="conversionService"/>
 
     <mvc:view-controller path="/toLoginPage" view-name="Login"/>
@@ -47,4 +46,28 @@
         </property>
     </bean>
 
+    <bean id="multipartResolver" class="org.springframework.web.multipart.commons.CommonsMultipartResolver">
+        <property name="maxUploadSize" value="#{20*1024*1024}"/>
+        <property name="defaultEncoding" value="UTF-8"/>
+    </bean>
+
+    <mvc:interceptors>
+        <mvc:interceptor>
+            <mvc:mapping path="/interceptor01"/>
+            <bean id="myInterceptor" class="pt.joja.interceptor.MyInterceptor"/>
+        </mvc:interceptor>
+        <mvc:interceptor>
+            <mvc:mapping path="/interceptor01"/>
+            <bean id="mySecondInterceptor" class="pt.joja.interceptor.MySecondInterceptor"/>
+        </mvc:interceptor>
+    </mvc:interceptors>
+
+    <bean class="org.springframework.web.servlet.handler.SimpleMappingExceptionResolver">
+        <property name="exceptionMappings">
+            <props>
+                <prop key="java.lang.NumberFormatException">myError</prop>
+            </props>
+        </property>
+        <property name="exceptionAttribute" value="message"/>
+    </bean>
 </beans>
